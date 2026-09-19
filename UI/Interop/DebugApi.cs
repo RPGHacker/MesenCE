@@ -27,7 +27,15 @@ namespace Mesen.Interop
 		[DllImport(DllPath)] public static extern void StartLogTraceToFile([MarshalAs(UnmanagedType.LPUTF8Str)] string filename);
 		[DllImport(DllPath)] public static extern void StopLogTraceToFile();
 
+		[DllImport(DllPath)][return: MarshalAs(UnmanagedType.I1)] public static extern bool OpenNetworkLogSocket(ushort port);
+		[DllImport(DllPath)] public static extern void CloseNetworkLogSocket();
+		[DllImport(DllPath)][return: MarshalAs(UnmanagedType.I1)] public static extern bool BeginNetworkLogConnection();
+		[DllImport(DllPath)] public static extern void EndNetworkLogConnection();
+		[DllImport(DllPath)][return: MarshalAs(UnmanagedType.I1)] public static extern bool StartNetworkLogLogging();
+		[DllImport(DllPath)] public static extern void StopNetworkLogLogging();
+
 		[DllImport(DllPath)] public static extern void SetTraceOptions(CpuType cpuType, InteropTraceLoggerOptions options);
+		[DllImport(DllPath)] public static extern void SetNetworkLoggingOptions(InteropNetworkLoggingOptions options);
 
 		public const int TraceLogBufferSize = 30000;
 		[DllImport(DllPath)] public static extern void ClearExecutionTrace();
@@ -1463,6 +1471,13 @@ namespace Mesen.Interop
 		public byte[] Format;
 	}
 
+	[Serializable]
+	public struct InteropNetworkLoggingOptions
+	{
+		public TraceFormat TraceFormat;
+		[MarshalAs(UnmanagedType.I1)] public bool UniqueRowsOnly;
+	}
+
 	public enum VectorType
 	{
 		Indirect,
@@ -1644,6 +1659,13 @@ namespace Mesen.Interop
 
 		NesChrDrawn = 0x01,
 		NesPcmData = 0x80
+	}
+
+	public enum TraceFormat : byte
+	{
+		Text = 0,
+		Diztinguish = 1,
+		DiztinguishAbridged = 2,
 	}
 
 	public struct CdlStatistics

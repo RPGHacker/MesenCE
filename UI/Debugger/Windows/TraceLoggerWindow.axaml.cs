@@ -11,6 +11,7 @@ using Mesen.Debugger.Utilities;
 using Mesen.Debugger.ViewModels;
 using Mesen.Interop;
 using Mesen.Utilities;
+using Mesen.Windows;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -203,6 +204,34 @@ namespace Mesen.Debugger.Windows
 			if(_model.IsLoggingToFile) {
 				_model.IsLoggingToFile = false;
 				DebugApi.StopLogTraceToFile();
+			}
+		}
+
+		private async void OnStartNetworkLoggingClick(object sender, RoutedEventArgs e)
+		{
+			TraceConfigureNetworkSocketWindow wnd = new TraceConfigureNetworkSocketWindow();
+			TraceConfigureNetworkSocketWindowResult result = await wnd.ShowCenteredDialog<TraceConfigureNetworkSocketWindowResult>(this.GetWindow());
+
+			if (result == TraceConfigureNetworkSocketWindowResult.ConnectionEstablished) {
+				InteropNetworkLoggingOptions options;
+				options.TraceFormat = wnd.TraceFormat;
+				options.UniqueRowsOnly = wnd.UniqueRowsOnly;
+				DebugApi.SetNetworkLoggingOptions(options);
+
+				if(DebugApi.StartNetworkLogLogging()) {
+					_model.IsLoggingToNetworkSocket = true;
+				} else {
+					DebugApi.CloseNetworkLogSocket();
+					await MesenMsgBox.Show(null, "StartingTraceLogNetworkFailed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				}
+			}
+		}
+
+		private void OnStopNetworkLoggingClick(object sender, RoutedEventArgs e)
+		{
+			if (_model.IsLoggingToNetworkSocket) {
+				DebugApi.CloseNetworkLogSocket();
+				_model.IsLoggingToNetworkSocket = false;
 			}
 		}
 

@@ -2,16 +2,10 @@
 	xmlns="https://github.com/avaloniaui"
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-	xmlns:m="clr-namespace:Mesen"
 	xmlns:vm="using:Mesen.Debugger.ViewModels"
-	xmlns:sys="using:System"
-	xmlns:v="using:Mesen.Views"
-	xmlns:dbg="using:Mesen.Debugger"
 	xmlns:c="using:Mesen.Controls"
 	xmlns:l="using:Mesen.Localization"
-	xmlns:i="using:Mesen.Interop"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-	xmlns:dvm="using:Mesen.Debugger.ViewModels"
 	xmlns:dc="using:Mesen.Debugger.Controls"
 	xmlns:dv="using:Mesen.Debugger.Views"
 	mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="300"
@@ -47,7 +41,7 @@
 			<dc:ActionToolbar Items="{Binding ToolbarItems}" />
 		</StackPanel>
 
-		<Grid ColumnDefinitions="Auto,*,Auto,Auto" RowDefinitions="Auto" DockPanel.Dock="Bottom">
+		<Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" RowDefinitions="Auto" DockPanel.Dock="Bottom">
 			<c:ButtonWithIcon
 				Grid.Column="0"
 				Click="OnClearClick"
@@ -64,6 +58,21 @@
 			/>
 			<c:ButtonWithIcon
 				Grid.Column="3"
+				Click="OnStartNetworkLoggingClick"
+				IsEnabled="{Binding IsStartLoggingEnabled}"
+				IsVisible="{Binding !IsLoggingToNetworkSocket}"
+				Icon="Assets/Record.png"
+				Text="{l:Translate btnStartNetwork}"
+			/>
+			<c:ButtonWithIcon
+				Grid.Column="3"
+				Click="OnStopNetworkLoggingClick"
+				IsVisible="{Binding IsLoggingToNetworkSocket}"
+				Icon="Assets/MediaStop.png"
+				Text="{l:Translate btnStopNetwork}"
+			/>
+			<c:ButtonWithIcon
+				Grid.Column="4"
 				Click="OnStartLoggingClick"
 				IsEnabled="{Binding IsStartLoggingEnabled}"
 				IsVisible="{Binding !IsLoggingToFile}"
@@ -71,7 +80,7 @@
 				Text="{l:Translate btnStart}"
 			/>
 			<c:ButtonWithIcon
-				Grid.Column="3"
+				Grid.Column="4"
 				Click="OnStopLoggingClick"
 				IsVisible="{Binding IsLoggingToFile}"
 				Icon="Assets/MediaStop.png"

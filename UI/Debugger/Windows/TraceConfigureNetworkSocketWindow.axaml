@@ -1,0 +1,79 @@
+<Window
+	xmlns="https://github.com/avaloniaui"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:l="using:Mesen.Localization"
+	xmlns:c="using:Mesen.Controls"
+	xmlns:mi="using:Mesen.Interop"
+	VerticalAlignment="Stretch"
+	HorizontalAlignment="Stretch"
+	x:Class="Mesen.Windows.TraceConfigureNetworkSocketWindow"
+	Name="root"
+	Width="350"
+	Height="100"
+	Title="{l:Translate Title}"
+>
+	<Border BorderBrush="{StaticResource MesenGrayBorderColor}" BorderThickness="1" Margin="3" Padding="3">
+		<DockPanel>
+			<Grid RowDefinitions="Auto,Auto,Auto">				
+				<Grid Grid.Row="0" ColumnDefinitions="Auto,*" Margin="0 0 0 5">
+					<TextBlock
+						Grid.Column="0"
+						VerticalAlignment="Center"
+						Text="{l:Translate Format}"
+						Margin="0 0 5 0"
+					/>
+					<c:EnumComboBox
+						Grid.Column="1"
+						SelectedItem="{Binding TraceFormat, ElementName=root}"
+					/>
+				</Grid>
+
+				<Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,Auto,Auto,Auto" Margin="0 0 0 5">
+					<TextBlock
+						Grid.Column="0"
+						VerticalAlignment="Center"
+						Text="{l:Translate Port}"
+						Margin="0 0 5 0"
+					/>
+					<NumericUpDown
+						Grid.Column="1"
+						Minimum="0"
+						Maximum="65535"
+						MinWidth="50"
+						ShowButtonSpinner="false"
+						Value="{Binding Port, ElementName=root}"
+						Margin="0 0 15 0"
+					/>
+					<CheckBox
+						Grid.Column="2"
+						IsChecked="{Binding UniqueRowsOnly, ElementName=root}"
+					/>
+					<TextBlock
+						Grid.Column="3"
+						VerticalAlignment="Center"
+						Text="{l:Translate UniqueRowsOnly}"
+					/>
+				</Grid>
+
+				<Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto">
+					<Button
+						Grid.Column="0"
+						Content="{l:Translate btnCancel}"
+						Click="OnCancel"
+					/>
+
+					<Panel
+						Grid.Column="1"
+						MinWidth="25"
+					/>
+
+					<Button
+						Grid.Column="2"
+						Content="{l:Translate btnStart}"
+						Click="OnStartLogging"
+					/>
+				</Grid>
+			</Grid>
+		</DockPanel>
+	</Border>
+</Window>

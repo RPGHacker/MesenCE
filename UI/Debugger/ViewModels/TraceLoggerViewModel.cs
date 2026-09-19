@@ -32,6 +32,7 @@ namespace Mesen.Debugger.ViewModels
 		[ObservableProperty] public partial int MinScrollPosition { get; set; } = 0;
 		[ObservableProperty] public partial int MaxScrollPosition { get; set; } = DebugApi.TraceLogBufferSize;
 		[ObservableProperty] public partial bool IsLoggingToFile { get; set; } = false;
+		[ObservableProperty] public partial bool IsLoggingToNetworkSocket { get; set; } = false;
 
 		[ObservableProperty] public partial List<TraceLoggerOptionTab> Tabs { get; set; } = new();
 		[ObservableProperty] public partial TraceLoggerOptionTab SelectedTab { get; set; } = null!;

@@ -3021,6 +3021,12 @@
     <ClInclude Include="Shared\Video\DrawPixelsCommand.h">
       <Filter>Shared\Video</Filter>
     </ClInclude>
+    <ClInclude Include="Debugger\TraceLogNetworkSocket.h">
+      <Filter>Debugger</Filter>
+    </ClInclude>
+    <ClInclude Include="Shared\TraceFormat.h">
+      <Filter>Shared</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Shared\Video\RotateFilter.cpp">

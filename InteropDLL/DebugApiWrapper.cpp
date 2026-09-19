@@ -21,6 +21,7 @@
 #include "Core/Debugger/BaseEventManager.h"
 #include "Core/Debugger/ITraceLogger.h"
 #include "Core/Debugger/TraceLogFileSaver.h"
+#include "Core/Debugger/TraceLogNetworkSocket.h"
 #include "Core/Debugger/FrozenAddressManager.h"
 #include "Core/Gameboy/GbTypes.h"
 #include "Utilities/StringUtilities.h"
@@ -111,6 +112,11 @@ extern "C"
 		WithToolVoid(GetTraceLogger(type), SetOptions(options));
 	}
 
+	DllExport void __stdcall SetNetworkLoggingOptions(NetworkLoggingOptions options)
+	{
+		WithDebugger(void, SetNetworkLoggingOptions(options));
+	}
+
 	DllExport uint32_t __stdcall GetExecutionTrace(TraceRow output[], uint32_t startOffset, uint32_t lineCount)
 	{
 		return WithDebugger(uint32_t, GetExecutionTrace(output, startOffset, lineCount));
@@ -129,6 +135,36 @@ extern "C"
 	DllExport void __stdcall StopLogTraceToFile()
 	{
 		WithDebugger(void, GetTraceLogFileSaver()->StopLogging());
+	}
+
+	DllExport bool __stdcall OpenNetworkLogSocket(uint16_t port)
+	{
+		return WithDebugger(bool, GetTraceLogNetworkSocket()->OpenSocket(port));
+	}
+
+	DllExport void __stdcall CloseNetworkLogSocket()
+	{
+		WithDebugger(void, GetTraceLogNetworkSocket()->CloseSocket());
+	}
+
+	DllExport bool __stdcall BeginNetworkLogConnection()
+	{
+		return WithDebugger(bool, GetTraceLogNetworkSocket()->BeginConnection());
+	}
+
+	DllExport void __stdcall EndNetworkLogConnection()
+	{
+		WithDebugger(void, GetTraceLogNetworkSocket()->EndConnection());
+	}
+
+	DllExport bool __stdcall StartNetworkLogLogging()
+	{
+		return WithDebugger(bool, GetTraceLogNetworkSocket()->StartLogging());
+	}
+
+	DllExport void __stdcall StopNetworkLogLogging()
+	{
+		WithDebugger(void, GetTraceLogNetworkSocket()->StopLogging());
 	}
 
 	DllExport void __stdcall SetBreakpoints(Breakpoint breakpoints[], uint32_t length)

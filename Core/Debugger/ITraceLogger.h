@@ -1,6 +1,7 @@
 #pragma once
 #include "pch.h"
 #include "Debugger/DebugTypes.h"
+#include "Core/Shared/TraceFormat.h"
 
 struct TraceRow
 {

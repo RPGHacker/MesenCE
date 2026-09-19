@@ -1,5 +1,6 @@
 #pragma once
 #include "pch.h"
+#include "TraceFormat.h"
 #include <algorithm>
 
 enum class EmulationFlags
@@ -1146,4 +1147,10 @@ enum class DebuggerFlags
 	SmsDebuggerEnabled = (1 << 10),
 	GbaDebuggerEnabled = (1 << 11),
 	WsDebuggerEnabled = (1 << 12),
+};
+
+struct NetworkLoggingOptions
+{
+	TraceFormat TraceFormat;
+	bool UniqueRowsOnly;
 };

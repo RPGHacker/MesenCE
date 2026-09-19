@@ -13,6 +13,7 @@
 #include "Debugger/ITraceLogger.h"
 #include "Debugger/ExpressionEvaluator.h"
 #include "Debugger/TraceLogFileSaver.h"
+#include "Debugger/TraceLogNetworkSocket.h"
 #include "Utilities/HexUtilities.h"
 #include "Shared/Emulator.h"
 #include "Shared/EmuSettings.h"
@@ -150,6 +151,8 @@ protected:
 	LabelManager* _labelManager;
 	MemoryDumper* _memoryDumper;
 	Debugger* _debugger;
+	NetworkLoggingOptions* _networkLoggingOptions;
+	bool _rowStateInitialized = false;
 
 	CpuType _cpuType = CpuType::Snes;
 	MemoryType _cpuMemoryType = MemoryType::SnesMemory;
@@ -299,6 +302,26 @@ protected:
 
 		_pendingLog = false;
 
+		bool needsToTrackRowState = _debugger->GetTraceLogNetworkSocket()->IsEnabled() && _networkLoggingOptions->UniqueRowsOnly;
+		if(needsToTrackRowState && !_rowStateInitialized) {
+			StartRowStateTracking();
+			_rowStateInitialized = true;
+		} else if(!needsToTrackRowState && _rowStateInitialized) {
+			StopRowStateTracking();
+			_rowStateInitialized = false;
+		}
+
+		// Skipping rows is currently a network logging option and thus not used
+		// for file logging or tracing in general. However, that could very easily
+		// be changed if it's deemed useful for thos scenarios.
+		bool skipRow = needsToTrackRowState;
+		if(needsToTrackRowState) {
+			if(IsUniqueRow(cpuState, disassemblyInfo)) {
+				TrackRowState(cpuState, disassemblyInfo);
+				skipRow = false;
+			}
+		}
+
 		if(_debugger->GetTraceLogFileSaver()->IsEnabled()) {
 			string row;
 			row.reserve(300);
@@ -312,6 +335,40 @@ protected:
 
 			((TraceLoggerType*)this)->GetTraceRow(row, cpuState, _ppuState[_currentPos], disassemblyInfo);
 			_debugger->GetTraceLogFileSaver()->Log(row);
+		}
+
+		if(_debugger->GetTraceLogNetworkSocket()->IsEnabled()) {
+			if(!skipRow) {
+				switch(_networkLoggingOptions->TraceFormat) {
+					case TraceFormat::Text: {
+						// Unlike the log file saver, the log network socket does
+						// not get the PC automatically. There could be some
+						// tool waiting at the other end of the socket, expecting
+						// a very specific text format. It's probably best for end
+						// users to just use the [PC] specifier explicitly if needed.
+						string row;
+						row.reserve(300);
+
+						((TraceLoggerType*)this)->GetTraceRow(row, cpuState, _ppuState[_currentPos], disassemblyInfo);
+						// +1 for the null terminator.
+						_debugger->GetTraceLogNetworkSocket()->Log((const uint8_t*)row.c_str(), (int)row.length() + 1);
+						break;
+					}
+
+					case TraceFormat::Diztinguish:
+					case TraceFormat::DiztinguishAbridged: {
+						vector<uint8_t> data;
+						GetTraceData(&data, cpuState, disassemblyInfo, _networkLoggingOptions->TraceFormat);
+
+						if (!data.empty()) {
+							_debugger->GetTraceLogNetworkSocket()->Log(&data.front(), (int)data.size());
+						}
+						break;
+					}
+				}
+			} else {
+				_debugger->GetTraceLogNetworkSocket()->FlushOldBuffers();
+			}
 		}
 
 		_currentPos = (_currentPos + 1) % ExecutionLogSize;
@@ -386,6 +443,27 @@ protected:
 
 	virtual RowDataType GetFormatTagType(string& tag) = 0;
 
+	virtual void StartRowStateTracking()
+	{
+	}
+
+	virtual void StopRowStateTracking()
+	{
+	}
+
+	virtual bool IsUniqueRow(CpuStateType& cpuState, DisassemblyInfo& disassemblyInfo)
+	{
+		return true;
+	}
+
+	virtual void TrackRowState(CpuStateType& cpuState, DisassemblyInfo& disassemblyInfo)
+	{
+	}
+
+	virtual void GetTraceData(vector<uint8_t>* target, CpuStateType& cpuState, DisassemblyInfo& disassemblyInfo, TraceFormat traceFormat)
+	{
+	}
+
 	void ProcessSharedTag(RowPart& rowPart, string& output, CpuStateType& cpuState, TraceLogPpuState& ppuState, DisassemblyInfo& disassemblyInfo)
 	{
 		switch(rowPart.DataType) {
@@ -417,6 +495,7 @@ public:
 		_options = {};
 		_currentPos = 0;
 		_pendingLog = false;
+		_networkLoggingOptions = debugger->GetNetworkLoggingOptions();
 
 		_disassemblyCache = new DisassemblyInfo[BaseTraceLogger::ExecutionLogSize];
 		_rowIds = new uint64_t[BaseTraceLogger::ExecutionLogSize];

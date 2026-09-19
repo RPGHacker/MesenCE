@@ -35,6 +35,7 @@ class IAssembler;
 class IDebugger;
 class ITraceLogger;
 class TraceLogFileSaver;
+class TraceLogNetworkSocket;
 class FrozenAddressManager;
 class ISerializable;
 
@@ -75,6 +76,8 @@ private:
 	unique_ptr<CdlManager> _cdlManager;
 
 	unique_ptr<TraceLogFileSaver> _traceLogSaver;
+	unique_ptr<TraceLogNetworkSocket> _traceLogNetworkSocket;
+	NetworkLoggingOptions _networkLoggingOptions;
 
 	SimpleLock _logLock;
 	std::list<string> _debuggerLog;
@@ -188,6 +191,9 @@ public:
 	IDebugger* GetMainDebugger();
 
 	TraceLogFileSaver* GetTraceLogFileSaver() { return _traceLogSaver.get(); }
+	TraceLogNetworkSocket* GetTraceLogNetworkSocket() { return _traceLogNetworkSocket.get(); }
+	void SetNetworkLoggingOptions(const NetworkLoggingOptions& options) { _networkLoggingOptions = options; }
+	NetworkLoggingOptions* GetNetworkLoggingOptions() { return &_networkLoggingOptions; }
 	MemoryDumper* GetMemoryDumper() { return _memoryDumper.get(); }
 	MemoryAccessCounter* GetMemoryAccessCounter() { return _memoryAccessCounter.get(); }
 	Disassembler* GetDisassembler() { return _disassembler.get(); }
