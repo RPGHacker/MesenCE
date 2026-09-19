@@ -45,6 +45,7 @@ void SnesCpuTraceLogger::StopRowStateTracking()
 	for(size_t i = 0u; i < BankCount; ++i) {
 		if(_uniqueRowBankRecords->BankStates[i] != nullptr) {
 			delete _uniqueRowBankRecords->BankStates[i];
+			_uniqueRowBankRecords->BankStates[i] = nullptr;
 		}
 	}
 
@@ -126,7 +127,25 @@ void SnesCpuTraceLogger::GetTraceData(vector<uint8_t>* target, SnesCpuState& cpu
 		target->push_back(cpuState.PS);
 
 		if (traceFormat == TraceFormat::Diztinguish) {
-			// TODO
+			uint8_t* byteCode = disassemblyInfo.GetByteCode();
+			target->push_back(byteCode[0u]);
+			target->push_back(byteCode[1u]);
+			target->push_back(byteCode[2u]);
+			target->push_back(byteCode[3u]);
+
+			target->push_back((cpuState.A >> 0) & 0xFF);
+			target->push_back((cpuState.A >> 8) & 0xFF);
+
+			target->push_back((cpuState.X >> 0) & 0xFF);
+			target->push_back((cpuState.X >> 8) & 0xFF);
+
+			target->push_back((cpuState.Y >> 0) & 0xFF);
+			target->push_back((cpuState.Y >> 8) & 0xFF);
+
+			target->push_back((cpuState.SP >> 0) & 0xFF);
+			target->push_back((cpuState.SP >> 8) & 0xFF);
+
+			target->push_back((uint8_t)cpuState.EmulationMode);
 		}
 
 		(*target)[sizeIndex] = (uint8_t)(target->size() - sizeIndex - 1u);

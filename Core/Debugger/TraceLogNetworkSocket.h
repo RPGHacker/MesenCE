@@ -277,6 +277,7 @@ public:
 				{
 					_loggingQueue.push(_currentLogItem);
 				}
+
 				_currentLogItem.Buffer = nullptr;
 			}
 
