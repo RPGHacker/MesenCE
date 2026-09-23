@@ -70,7 +70,7 @@ private:
 	// that can happen during shutdown because Log() and StopLogging() are
 	// called from different threads. Because Log() is a performance-critical
 	// function, I don't want to protect it with a mutex.
-	bool _insideLogFunction;
+	volatile bool _insideLogFunction;
 	bool _compressionThreadQuitRequested;
 	bool _networkingThreadQuitRequested;
 	std::thread _compressionThread;
