@@ -650,6 +650,15 @@ void Debugger::ProcessEvent(EventType type, std::optional<CpuType> cpuTypeOpt)
 	}
 }
 
+void Debugger::ProcessEndOfFrame()
+{	
+	for(int i = 0; i <= (int)DebugUtilities::GetLastCpuType(); i++) {
+		if(_debuggers[i].Debugger) {
+			_debuggers[i].Debugger->ProcessEndOfFrame();
+		}
+	}
+}
+
 template<CpuType type, typename T>
 void Debugger::ProcessScripts(uint32_t addr, T& value, MemoryOperationType opType)
 {

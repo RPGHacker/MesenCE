@@ -173,6 +173,11 @@ protected:
 	unique_ptr<ExpressionEvaluator> _expEvaluator;
 	ExpressionData _conditionData;
 
+	bool _anyLoggingActive;
+	std::queue<DisassemblyInfo> _disassemblyInfoQueuedForLogging;
+	std::queue<CpuStateType> _cpuStateQueuedForLogging;
+	std::queue<TraceLogPpuState> _ppuStateQueuedForLogging;
+
 	void WriteByteCode(DisassemblyInfo& info, RowPart& rowPart, string& output)
 	{
 		string byteCode;
@@ -300,76 +305,13 @@ protected:
 		_rowIds[_currentPos] = ITraceLogger::NextRowId;
 		ITraceLogger::NextRowId++;
 
+		if(_anyLoggingActive) {
+			_disassemblyInfoQueuedForLogging.push(disassemblyInfo);
+			_cpuStateQueuedForLogging.push(cpuState);
+			_ppuStateQueuedForLogging.push(_ppuState[_currentPos]);
+		}
+
 		_pendingLog = false;
-
-		bool needsToTrackRowState = _debugger->GetTraceLogNetworkSocket()->IsEnabled() && _networkLoggingOptions->UniqueRowsOnly;
-		if(needsToTrackRowState && !_rowStateInitialized) {
-			StartRowStateTracking();
-			_rowStateInitialized = true;
-		} else if(!needsToTrackRowState && _rowStateInitialized) {
-			StopRowStateTracking();
-			_rowStateInitialized = false;
-		}
-
-		// Skipping rows is currently a network logging option and thus not used
-		// for file logging or tracing in general. However, that could very easily
-		// be changed if it's deemed useful for thos scenarios.
-		bool skipRow = needsToTrackRowState;
-		if(needsToTrackRowState) {
-			if(IsUniqueRow(cpuState, disassemblyInfo)) {
-				TrackRowState(cpuState, disassemblyInfo);
-				skipRow = false;
-			}
-		}
-
-		if(_debugger->GetTraceLogFileSaver()->IsEnabled()) {
-			string row;
-			row.reserve(300);
-
-			//Display PC
-			RowPart rowPart = {};
-			rowPart.DisplayInHex = true;
-			rowPart.MinWidth = DebugUtilities::GetProgramCounterSize(_cpuType);
-			WriteIntValue(row, ((TraceLoggerType*)this)->GetProgramCounter(cpuState), rowPart);
-			row += "  ";
-
-			((TraceLoggerType*)this)->GetTraceRow(row, cpuState, _ppuState[_currentPos], disassemblyInfo);
-			_debugger->GetTraceLogFileSaver()->Log(row);
-		}
-
-		if(_debugger->GetTraceLogNetworkSocket()->IsEnabled()) {
-			if(!skipRow) {
-				switch(_networkLoggingOptions->TraceFormat) {
-					case TraceFormat::Text: {
-						// Unlike the log file saver, the log network socket does
-						// not get the PC automatically. There could be some
-						// tool waiting at the other end of the socket, expecting
-						// a very specific text format. It's probably best for end
-						// users to just use the [PC] specifier explicitly if needed.
-						string row;
-						row.reserve(300);
-
-						((TraceLoggerType*)this)->GetTraceRow(row, cpuState, _ppuState[_currentPos], disassemblyInfo);
-						// +1 for the null terminator.
-						_debugger->GetTraceLogNetworkSocket()->Log((const uint8_t*)row.c_str(), (int)row.length() + 1);
-						break;
-					}
-
-					case TraceFormat::Diztinguish:
-					case TraceFormat::DiztinguishAbridged: {
-						vector<uint8_t> data;
-						GetTraceData(&data, cpuState, disassemblyInfo, _networkLoggingOptions->TraceFormat);
-
-						if (!data.empty()) {
-							_debugger->GetTraceLogNetworkSocket()->Log(&data.front(), (int)data.size());
-						}
-						break;
-					}
-				}
-			} else {
-				_debugger->GetTraceLogNetworkSocket()->FlushOldBuffers();
-			}
-		}
 
 		_currentPos = (_currentPos + 1) % ExecutionLogSize;
 	}
@@ -553,6 +495,115 @@ public:
 				_pendingLog = true;
 				_lastState = cpuState;
 				_lastDisassemblyInfo = disassemblyInfo;
+			}
+		}
+	}
+
+	void ProcessEndOfFrame()
+	{
+		TraceLoggerType* selfDerived = ((TraceLoggerType*)this);
+		TraceLogFileSaver* fileLogger = _debugger->GetTraceLogFileSaver();
+		TraceLogNetworkSocket* networkLogger = _debugger->GetTraceLogNetworkSocket();
+
+		bool fileLoggerActive = fileLogger->IsEnabled();
+		bool networkLoggerActive = networkLogger->IsEnabled();
+
+		_anyLoggingActive = fileLoggerActive || networkLoggerActive;
+
+		if(_anyLoggingActive) {
+			bool needsToTrackRowState = networkLoggerActive && _networkLoggingOptions->UniqueRowsOnly;
+			if(needsToTrackRowState && !_rowStateInitialized) {
+				StartRowStateTracking();
+				_rowStateInitialized = true;
+			} else if(!needsToTrackRowState && _rowStateInitialized) {
+				StopRowStateTracking();
+				_rowStateInitialized = false;
+			}
+
+			if(networkLoggerActive) {
+				if(!_cpuStateQueuedForLogging.empty()) {
+					networkLogger->UpdateLastLogTimestamp();
+				} else {
+					networkLogger->FlushOldBuffers();
+				}
+			}
+
+			string row;
+			row.reserve(300);
+
+			vector<uint8_t> data;
+			data.reserve(50);
+
+			while(!_cpuStateQueuedForLogging.empty()) {
+				DisassemblyInfo disassemblyInfo = _disassemblyInfoQueuedForLogging.front();
+				CpuStateType cpuState = _cpuStateQueuedForLogging.front();
+				TraceLogPpuState ppuState = _ppuStateQueuedForLogging.front();
+				_disassemblyInfoQueuedForLogging.pop();
+				_cpuStateQueuedForLogging.pop();
+				_ppuStateQueuedForLogging.pop();
+
+				// Skipping rows is currently a network logging option and thus not used
+				// for file logging or tracing in general. However, that could very easily
+				// be changed if it's deemed useful for thos scenarios.
+				bool skipRow = needsToTrackRowState;
+				if(needsToTrackRowState) {
+					if(IsUniqueRow(cpuState, disassemblyInfo)) {
+						TrackRowState(cpuState, disassemblyInfo);
+						skipRow = false;
+					}
+				}
+
+				if(fileLoggerActive) {
+					row.clear();
+
+					//Display PC
+					RowPart rowPart = {};
+					rowPart.DisplayInHex = true;
+					rowPart.MinWidth = DebugUtilities::GetProgramCounterSize(_cpuType);
+					WriteIntValue(row, selfDerived->GetProgramCounter(cpuState), rowPart);
+					row += "  ";
+
+					selfDerived->GetTraceRow(row, cpuState, ppuState, disassemblyInfo);
+					fileLogger->Log(row);
+				}
+
+				if(networkLoggerActive) {
+					if(!skipRow) {
+						switch(_networkLoggingOptions->TraceFormat) {
+							case TraceFormat::Text: {
+								// Unlike the log file saver, the log network socket does
+								// not get the PC automatically. There could be some
+								// tool waiting at the other end of the socket, expecting
+								// a very specific text format. It's probably best for end
+								// users to just use the [PC] specifier explicitly if needed.
+								row.clear();
+
+								selfDerived->GetTraceRow(row, cpuState, ppuState, disassemblyInfo);
+								// +1 for the null terminator.
+								networkLogger->Log((const uint8_t*)row.c_str(), (int)row.length() + 1);
+								break;
+							}
+
+							case TraceFormat::Diztinguish:
+							case TraceFormat::DiztinguishAbridged: {
+								data.clear();
+								GetTraceData(&data, cpuState, disassemblyInfo, _networkLoggingOptions->TraceFormat);
+
+								if(!data.empty()) {
+									networkLogger->Log(&data.front(), (int)data.size());
+								}
+								break;
+							}
+						}
+					}
+				}
+			}
+		} else {
+			// These should always have the same size, so the first check should be nough.
+			if(_cpuStateQueuedForLogging.size() > 0 /*|| _ppuStateQueuedForLogging.size() > 0 || _disassemblyInfoQueuedForLogging.size() > 0*/) {
+				_disassemblyInfoQueuedForLogging = std::queue<DisassemblyInfo>();
+				_cpuStateQueuedForLogging = std::queue<CpuStateType>();
+				_ppuStateQueuedForLogging = std::queue<TraceLogPpuState>();
 			}
 		}
 	}

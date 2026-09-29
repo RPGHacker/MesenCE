@@ -292,6 +292,15 @@ public:
 	__forceinline bool IsEnabled() { return _state >= State::Logging; }
 
 
+	void UpdateLastLogTimestamp()
+	{
+		if(_state != State::Logging) {
+			return;
+		}
+
+		_lastLogTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+	}
+
 	void Log(const uint8_t* data, int length)
 	{
 		_insideLogFunction = true;
@@ -300,8 +309,6 @@ public:
 			_insideLogFunction = false;
 			return;
 		}
-
-		_lastLogTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
 		if (_currentLogItem.Size + length > _currentLogItem.Capacity) {
 			if (_currentLogItem.Size == 0u) {
