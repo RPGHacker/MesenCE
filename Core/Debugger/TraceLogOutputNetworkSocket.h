@@ -1,9 +1,8 @@
 #pragma once
 #include "pch.h"
+#include "TraceLogOutput.h"
 
 #include "Utilities/Socket.h"
-#include "Utilities/CRC32.h"
-#include "Core/Shared/TraceFormat.h"
 #include "Core/Shared/MessageManager.h"
 #include "Utilities/CompressionHelper.h"
 
@@ -13,8 +12,14 @@
 #include <queue>
 #include <atomic>
 
-class TraceLogNetworkSocket
+class TraceLogOutputNetworkSocket : public TraceLogOutput
 {
+public:
+	struct Settings
+	{
+		uint16_t ConnectionPort;
+	};
+
 private:
 	enum class State
 	{
@@ -25,6 +30,8 @@ private:
 		Connected,
 		Logging,
 	};
+
+	Settings _selfSettings;
 
 	// A simple explanation on logger's general functionality:
 	// - The main thread appends all traces to a ChunkSize-sized buffer from the logging
@@ -44,10 +51,6 @@ private:
 	// we're sending here (especially when used for the purpose of disassembling ROMs).
 	// Though I won't be doing that until I know the networking thread is actually
 	// a bottleneck.
-
-	static constexpr size_t ChunkSize = 1u * 1024u * 1024u;
-	static constexpr size_t CompressedChunkSize = (size_t)((float)ChunkSize * 1.2f);
-	static constexpr size_t ChunkCount = 10u;
 
 	struct WorkItem
 	{
@@ -82,7 +85,7 @@ private:
 	std::unique_ptr<Socket> _socket = nullptr;
 	std::vector<std::unique_ptr<Socket>> _openConnections;
 
-	struct ZlibCompressionHeader
+	struct DiztinguishZlibCompressionHeader
 	{
 		// 0:     uint8_t:  Character 'Z' as a flag for compressed data.
 		// 1 - 4: uint32_t: Length of the uncompressed buffer, little-endian.
@@ -91,22 +94,31 @@ private:
 	};
 
 public:
-	~TraceLogNetworkSocket()
+	~TraceLogOutputNetworkSocket()
 	{
 		CloseSocket();
 	}
 
 
-	bool OpenSocket(uint16_t port)
+	bool OpenSocket(const Settings& selfSettings, const TraceLogOutput::Settings& sharedSettings)
 	{
-		if (_state == State::Uninitialized) {
-			_logMemoryStart = new uint8_t[ChunkSize * ChunkCount];
+		if(_state == State::Uninitialized) {
+			_selfSettings = selfSettings;
+			_sharedSettings = sharedSettings;
+
+			// Just a wild guess as to how much memory the compressed data will need at most.
+			// In the average, most likely case, the compressed buffer will need a lot less
+			// memory than the input buffers, but this should prepare us for the worst case
+			// without needing to constantly reallocate memory.
+			const size_t CompressedChunkSize = (size_t)((float)_sharedSettings.ChunkSize * 1.3f);
+
+			_logMemoryStart = new uint8_t[_sharedSettings.ChunkSize * _sharedSettings.ChunkCount];
 
 			if (_logMemoryStart == nullptr) {
 				return false;
 			}
 
-			_compressionMemoryStart = new uint8_t[CompressedChunkSize * ChunkCount];
+			_compressionMemoryStart = new uint8_t[CompressedChunkSize * _sharedSettings.ChunkCount];
 
 			if (_compressionMemoryStart == nullptr) {
 				delete _logMemoryStart;
@@ -118,15 +130,15 @@ public:
 			_compressionOutputQueue = std::queue<WorkItem>();
 			_networkingQueue = std::queue<WorkItem>();
 
-			for (size_t i = 0; i < ChunkCount; ++i) {
+			for(size_t i = 0; i < _sharedSettings.ChunkCount; ++i) {
 				WorkItem workItem;
-				workItem.Buffer = _logMemoryStart + (i * ChunkSize);
-				workItem.Capacity = ChunkSize;
+				workItem.Buffer = _logMemoryStart + (i * _sharedSettings.ChunkSize);
+				workItem.Capacity = _sharedSettings.ChunkSize;
 				workItem.Size = 0u;
 				_loggingQueue.push(workItem);
 			}
 
-			for (size_t i = 0; i < ChunkCount; ++i) {
+			for(size_t i = 0; i < _sharedSettings.ChunkCount; ++i) {
 				WorkItem workItem;
 				workItem.Buffer = _compressionMemoryStart + (i * CompressedChunkSize);
 				workItem.Capacity = CompressedChunkSize;
@@ -146,7 +158,7 @@ public:
 				return false;
 			}
 
-			_socket->Bind(port);
+			_socket->Bind(_selfSettings.ConnectionPort);
 
 			if (_socket->ConnectionError()) {
 				_socket.reset(nullptr);
@@ -415,7 +427,7 @@ public:
 				}
 			}
 
-			ZlibCompressionHeader header;
+			DiztinguishZlibCompressionHeader header;
 			header.data[0] = 'Z';
 			header.data[1] = (currentItem.Size >> 0) & 0xFF;
 			header.data[2] = (currentItem.Size >> 8) & 0xFF;

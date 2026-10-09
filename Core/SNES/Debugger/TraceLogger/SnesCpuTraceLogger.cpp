@@ -94,23 +94,23 @@ void SnesCpuTraceLogger::TrackRowState(SnesCpuState& cpuState, DisassemblyInfo& 
 	_uniqueRowBankRecords->BankStates[bank]->RowStates[bankOffset].UniqueCpuStates.insert(rowState.PackedState);
 }
 
-void SnesCpuTraceLogger::GetTraceData(vector<uint8_t>* target, SnesCpuState& cpuState, DisassemblyInfo& disassemblyInfo, TraceFormat traceFormat)
+void SnesCpuTraceLogger::GetTraceData(vector<uint8_t>* target, SnesCpuState& cpuState, DisassemblyInfo& disassemblyInfo, TraceLogOutput::OutputFormat traceFormat)
 {
 	switch(traceFormat) {
-	case TraceFormat::Text:
+	case TraceLogOutput::OutputFormat::Text:
 		// Should never be called - handled in BaseTraceLogger.
 		break;
-	case TraceFormat::Diztinguish:
+	case TraceLogOutput::OutputFormat::Diztinguish:
 		target->push_back(0xEF);
 		break;
-	case TraceFormat::DiztinguishAbridged:
+	case TraceLogOutput::OutputFormat::DiztinguishAbridged:
 		target->push_back(0xEE);
 		break;
 	}
 
 	uint32_t pc = GetProgramCounter(cpuState);
 
-	if(traceFormat == TraceFormat::Diztinguish || traceFormat == TraceFormat::DiztinguishAbridged) {
+	if(traceFormat == TraceLogOutput::OutputFormat::Diztinguish || traceFormat == TraceLogOutput::OutputFormat::DiztinguishAbridged) {
 		size_t sizeIndex = target->size();
 		target->push_back(0xFF); // Stub - we'll fill this out later.
 
@@ -126,7 +126,7 @@ void SnesCpuTraceLogger::GetTraceData(vector<uint8_t>* target, SnesCpuState& cpu
 		target->push_back(cpuState.DBR);
 		target->push_back(cpuState.PS);
 
-		if (traceFormat == TraceFormat::Diztinguish) {
+		if (traceFormat == TraceLogOutput::OutputFormat::Diztinguish) {
 			uint8_t* byteCode = disassemblyInfo.GetByteCode();
 			target->push_back(byteCode[0u]);
 			target->push_back(byteCode[1u]);

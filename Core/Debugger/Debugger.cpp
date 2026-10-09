@@ -17,8 +17,8 @@
 #include "Debugger/Profiler.h"
 #include "Debugger/ExpressionEvaluator.h"
 #include "Debugger/BaseEventManager.h"
-#include "Debugger/TraceLogFileSaver.h"
-#include "Debugger/TraceLogNetworkSocket.h"
+#include "Debugger/TraceLogOutputFile.h"
+#include "Debugger/TraceLogOutputNetworkSocket.h"
 #include "Debugger/CdlManager.h"
 #include "Debugger/ITraceLogger.h"
 #include "SNES/SnesCpuTypes.h"
@@ -78,8 +78,8 @@ Debugger::Debugger(Emulator* emu, IConsole* console)
 	_disassemblySearch.reset(new DisassemblySearch(_disassembler.get(), _labelManager.get()));
 	_memoryAccessCounter.reset(new MemoryAccessCounter(this));
 	_scriptManager.reset(new ScriptManager(this));
-	_traceLogSaver.reset(new TraceLogFileSaver());
-	_traceLogNetworkSocket.reset(new TraceLogNetworkSocket());
+	_traceLogOutputFile.reset(new TraceLogOutputFile());
+	_traceLogOutputNetworkSocket.reset(new TraceLogOutputNetworkSocket());
 	_cdlManager.reset(new CdlManager(this, _disassembler.get()));
 
 	//Use cpuTypes for iteration (ordered), not _cpuTypes (order is important for coprocessors, etc.)

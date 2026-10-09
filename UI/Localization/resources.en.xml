@@ -1289,11 +1289,9 @@
 			<Control ID="mnuSearch">_Search</Control>
 
 			<Control ID="btnOpenTraceFile">Open trace file</Control>
-			<Control ID="btnStart">Log to file...</Control>
+			<Control ID="btnStart">Log to stream...</Control>
 			<Control ID="btnStop">Stop logging</Control>
 			<Control ID="btnClear">Clear log</Control>
-			<Control ID="btnStartNetwork">Log to network socket...</Control>
-			<Control ID="btnStopNetwork">Stop logging</Control>
 		</Form>
 
 		<Form ID="EventViewerWindow">
@@ -1764,13 +1762,23 @@
 			<Control ID="btnDelete">Delete file</Control>
 		</Form>
 		
-		<Form ID="TraceConfigureNetworkSocketWindow">
-			<Control ID="Title">Configure network socket</Control>
-			<Control ID="Port">Port:</Control>
+		<Form ID="TraceLogOutputConfigurationWindow">
+			<Control ID="Title">Configure log output</Control>
+			<Control ID="ShowAdvancedSettings">Advanced settings</Control>
+			<Control ID="LogToFile">Log to File</Control>
+			<Control ID="LogToNetworkSocket">Log to Network Socket</Control>
+			<Control ID="ConnectionPort">Port:</Control>
+			<Control ID="NativeNewLines">Native line endings</Control>
 			<Control ID="Format">Format:</Control>
-			<Control ID="UniqueRowsOnly">Skip redundant lines</Control>
+			<Control ID="CompressionType">Compression:</Control>
+			<Control ID="ChunkSize">Buffer size:</Control>
+			<Control ID="ChunkCount">Buffer count:</Control>
+			<Control ID="BatchLogData">Flush &amp; compress in batches</Control>
+			<Control ID="IncludeImplicitPC">Prefix with PC</Control>
+			<Control ID="UniqueRowsOnly">Skip rows without new state info</Control>
 			<Control ID="btnCancel">Cancel</Control>
 			<Control ID="btnStart">Start</Control>
+			<Control ID="btnFileSelect">...</Control>
 		</Form>
 		
 		<Form ID="TraceNetworkSocketWaitForConnectionWindow">
@@ -3789,10 +3797,18 @@ E
 			<Value ID="CopyToClipboard">Copy to clipboard</Value>
 			<Value ID="ResetProfilerData">Reset profiler data</Value>
 		</Enum>
-		<Enum ID="TraceFormat">
-			<Value ID="Text">Null-terminated Strings</Value>
+		<Enum ID="TraceLogOutputFormat">
+			<Value ID="Text">Text lines</Value>
 			<Value ID="Diztinguish">DiztinGUIsh Binary</Value>
 			<Value ID="DiztinguishAbridged">DiztinGUIsh Binary (Compact)</Value>
+		</Enum>
+		<Enum ID="TraceLogOutputCompressionType">
+			<Value ID="None">None</Value>
+			<Value ID="DiztinguishZlib">DiztinGUIsh Zlib</Value>
+		</Enum>
+		<Enum ID="TraceLogOutputTarget">
+			<Value ID="File">File</Value>
+			<Value ID="NetworkSocket">Network Socket</Value>
 		</Enum>
 	</Enums>
 </Resources>

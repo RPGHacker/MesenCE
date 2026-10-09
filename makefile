@@ -247,3 +247,4 @@ clean:
 	rm -r -f $(LUAOBJ)
 	rm -r -f $(MACOSOBJ)
 	rm -r -f $(DLLOBJ)
+	cd UI && dotnet clean

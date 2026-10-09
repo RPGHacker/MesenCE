@@ -19,7 +19,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Debugger\TraceLogNetworkSocket.h" />
     <ClInclude Include="GBA\GbaCpuMultiply.h" />
     <ClInclude Include="GBA\GbaWaitStates.h" />
     <ClInclude Include="NES\Epsm.h" />
@@ -453,7 +452,9 @@
     <ClInclude Include="Debugger\BaseTraceLogger.h" />
     <ClInclude Include="Debugger\DebuggerFeatures.h" />
     <ClInclude Include="Debugger\ITraceLogger.h" />
-    <ClInclude Include="Debugger\TraceLogFileSaver.h" />
+    <ClInclude Include="Debugger\TraceLogOutput.h" />
+    <ClInclude Include="Debugger\TraceLogOutputFile.h" />
+    <ClInclude Include="Debugger\TraceLogOutputNetworkSocket.h" />
     <ClInclude Include="Gameboy\Carts\GbsCart.h" />
     <ClInclude Include="Gameboy\Debugger\DummyGbCpu.h" />
     <ClInclude Include="Gameboy\Debugger\GbTraceLogger.h" />

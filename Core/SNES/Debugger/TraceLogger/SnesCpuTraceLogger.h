@@ -67,7 +67,7 @@ protected:
 	void StopRowStateTracking() override;
 	bool IsUniqueRow(SnesCpuState& cpuState, DisassemblyInfo& disassemblyInfo) override;
 	void TrackRowState(SnesCpuState& cpuState, DisassemblyInfo& disassemblyInfo) override;
-	void GetTraceData(vector<uint8_t>* target, SnesCpuState& cpuState, DisassemblyInfo& disassemblyInfo, TraceFormat traceFormat) override;
+	void GetTraceData(vector<uint8_t>* target, SnesCpuState& cpuState, DisassemblyInfo& disassemblyInfo, TraceLogOutput::OutputFormat traceFormat) override;
 
 public:
 	SnesCpuTraceLogger(Debugger* debugger, IDebugger* cpuDebugger, CpuType cpuType, SnesPpu* ppu, SnesMemoryManager* memoryManager);

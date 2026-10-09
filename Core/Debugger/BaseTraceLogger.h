@@ -12,8 +12,8 @@
 #include "Debugger/DebugBreakHelper.h"
 #include "Debugger/ITraceLogger.h"
 #include "Debugger/ExpressionEvaluator.h"
-#include "Debugger/TraceLogFileSaver.h"
-#include "Debugger/TraceLogNetworkSocket.h"
+#include "Debugger/TraceLogOutputFile.h"
+#include "Debugger/TraceLogOutputNetworkSocket.h"
 #include "Utilities/HexUtilities.h"
 #include "Shared/Emulator.h"
 #include "Shared/EmuSettings.h"
@@ -151,7 +151,6 @@ protected:
 	LabelManager* _labelManager;
 	MemoryDumper* _memoryDumper;
 	Debugger* _debugger;
-	NetworkLoggingOptions* _networkLoggingOptions;
 	bool _rowStateInitialized = false;
 
 	CpuType _cpuType = CpuType::Snes;
@@ -402,7 +401,7 @@ protected:
 	{
 	}
 
-	virtual void GetTraceData(vector<uint8_t>* target, CpuStateType& cpuState, DisassemblyInfo& disassemblyInfo, TraceFormat traceFormat)
+	virtual void GetTraceData(vector<uint8_t>* target, CpuStateType& cpuState, DisassemblyInfo& disassemblyInfo, TraceLogOutput::OutputFormat traceFormat)
 	{
 	}
 
@@ -437,7 +436,6 @@ public:
 		_options = {};
 		_currentPos = 0;
 		_pendingLog = false;
-		_networkLoggingOptions = debugger->GetNetworkLoggingOptions();
 
 		_disassemblyCache = new DisassemblyInfo[BaseTraceLogger::ExecutionLogSize];
 		_rowIds = new uint64_t[BaseTraceLogger::ExecutionLogSize];
@@ -502,8 +500,9 @@ public:
 	void ProcessEndOfFrame()
 	{
 		TraceLoggerType* selfDerived = ((TraceLoggerType*)this);
-		TraceLogFileSaver* fileLogger = _debugger->GetTraceLogFileSaver();
-		TraceLogNetworkSocket* networkLogger = _debugger->GetTraceLogNetworkSocket();
+		TraceLogOutput* logOutput = nullptr;
+		TraceLogOutputFile* fileLogger = _debugger->GetTraceLogOutputFile();
+		TraceLogOutputNetworkSocket* networkLogger = _debugger->GetTraceLogOutputNetworkSocket();
 
 		bool fileLoggerActive = fileLogger->IsEnabled();
 		bool networkLoggerActive = networkLogger->IsEnabled();
@@ -511,7 +510,13 @@ public:
 		_anyLoggingActive = fileLoggerActive || networkLoggerActive;
 
 		if(_anyLoggingActive) {
-			bool needsToTrackRowState = networkLoggerActive && _networkLoggingOptions->UniqueRowsOnly;
+			if (fileLoggerActive){
+				logOutput = fileLogger;
+			} else {
+				logOutput = networkLogger;
+			}
+
+			bool needsToTrackRowState = networkLoggerActive && logOutput->GetUniqueRowsOnly();
 			if(needsToTrackRowState && !_rowStateInitialized) {
 				StartRowStateTracking();
 				_rowStateInitialized = true;
@@ -569,8 +574,8 @@ public:
 
 				if(networkLoggerActive) {
 					if(!skipRow) {
-						switch(_networkLoggingOptions->TraceFormat) {
-							case TraceFormat::Text: {
+						switch(logOutput->GetOutputFormat()) {
+							case TraceLogOutput::OutputFormat::Text: {
 								// Unlike the log file saver, the log network socket does
 								// not get the PC automatically. There could be some
 								// tool waiting at the other end of the socket, expecting
@@ -579,15 +584,15 @@ public:
 								row.clear();
 
 								selfDerived->GetTraceRow(row, cpuState, ppuState, disassemblyInfo);
-								// +1 for the null terminator.
-								networkLogger->Log((const uint8_t*)row.c_str(), (int)row.length() + 1);
+								row += '\n';
+								networkLogger->Log((const uint8_t*)row.c_str(), (int)row.length());
 								break;
 							}
 
-							case TraceFormat::Diztinguish:
-							case TraceFormat::DiztinguishAbridged: {
+							case TraceLogOutput::OutputFormat::Diztinguish:
+							case TraceLogOutput::OutputFormat::DiztinguishAbridged: {
 								data.clear();
-								GetTraceData(&data, cpuState, disassemblyInfo, _networkLoggingOptions->TraceFormat);
+								GetTraceData(&data, cpuState, disassemblyInfo, logOutput->GetOutputFormat());
 
 								if(!data.empty()) {
 									networkLogger->Log(&data.front(), (int)data.size());
@@ -599,7 +604,7 @@ public:
 				}
 			}
 		} else {
-			// These should always have the same size, so the first check should be nough.
+			// These should always have the same size, so just the first check should be good enough.
 			if(_cpuStateQueuedForLogging.size() > 0 /*|| _ppuStateQueuedForLogging.size() > 0 || _disassemblyInfoQueuedForLogging.size() > 0*/) {
 				_disassemblyInfoQueuedForLogging = std::queue<DisassemblyInfo>();
 				_cpuStateQueuedForLogging = std::queue<CpuStateType>();
