@@ -501,43 +501,40 @@ public:
 	{
 		TraceLoggerType* selfDerived = ((TraceLoggerType*)this);
 		TraceLogOutput* logOutput = nullptr;
-		TraceLogOutputFile* fileLogger = _debugger->GetTraceLogOutputFile();
-		TraceLogOutputNetworkSocket* networkLogger = _debugger->GetTraceLogOutputNetworkSocket();
 
-		bool fileLoggerActive = fileLogger->IsEnabled();
-		bool networkLoggerActive = networkLogger->IsEnabled();
+		{
+			TraceLogOutputFile* fileLogger = _debugger->GetTraceLogOutputFile();
+			TraceLogOutputNetworkSocket* networkLogger = _debugger->GetTraceLogOutputNetworkSocket();
 
-		_anyLoggingActive = fileLoggerActive || networkLoggerActive;
-
-		if(_anyLoggingActive) {
-			if (fileLoggerActive){
+			if(fileLogger->IsEnabled()) {
 				logOutput = fileLogger;
-			} else {
+			} else if(networkLogger->IsEnabled()) {
 				logOutput = networkLogger;
 			}
+		}
 
-			bool needsToTrackRowState = networkLoggerActive && logOutput->GetUniqueRowsOnly();
+		if(logOutput != nullptr) {
+			_anyLoggingActive = true;
+
+			bool needsToTrackRowState = logOutput->GetUniqueRowsOnly();
+
 			if(needsToTrackRowState && !_rowStateInitialized) {
 				StartRowStateTracking();
 				_rowStateInitialized = true;
-			} else if(!needsToTrackRowState && _rowStateInitialized) {
-				StopRowStateTracking();
-				_rowStateInitialized = false;
 			}
 
-			if(networkLoggerActive) {
-				if(!_cpuStateQueuedForLogging.empty()) {
-					networkLogger->UpdateLastLogTimestamp();
-				} else {
-					networkLogger->FlushOldBuffers();
-				}
+			if(!_cpuStateQueuedForLogging.empty()) {
+				logOutput->UpdateLastLogTimestamp();
+			} else {
+				logOutput->FlushOldBuffers();
+				return;
 			}
 
-			string row;
-			row.reserve(300);
+			string rowText;
+			rowText.reserve(300);
 
-			vector<uint8_t> data;
-			data.reserve(50);
+			vector<uint8_t> rowData;
+			rowData.reserve(50);
 
 			while(!_cpuStateQueuedForLogging.empty()) {
 				DisassemblyInfo disassemblyInfo = _disassemblyInfoQueuedForLogging.front();
@@ -547,9 +544,6 @@ public:
 				_cpuStateQueuedForLogging.pop();
 				_ppuStateQueuedForLogging.pop();
 
-				// Skipping rows is currently a network logging option and thus not used
-				// for file logging or tracing in general. However, that could very easily
-				// be changed if it's deemed useful for thos scenarios.
 				bool skipRow = needsToTrackRowState;
 				if(needsToTrackRowState) {
 					if(IsUniqueRow(cpuState, disassemblyInfo)) {
@@ -557,48 +551,35 @@ public:
 						skipRow = false;
 					}
 				}
+				
+				if(!skipRow) {
+					switch(logOutput->GetOutputFormat()) {
+						case TraceLogOutput::OutputFormat::Text: {
+							rowText.clear();
 
-				if(fileLoggerActive) {
-					row.clear();
-
-					//Display PC
-					RowPart rowPart = {};
-					rowPart.DisplayInHex = true;
-					rowPart.MinWidth = DebugUtilities::GetProgramCounterSize(_cpuType);
-					WriteIntValue(row, selfDerived->GetProgramCounter(cpuState), rowPart);
-					row += "  ";
-
-					selfDerived->GetTraceRow(row, cpuState, ppuState, disassemblyInfo);
-					fileLogger->Log(row);
-				}
-
-				if(networkLoggerActive) {
-					if(!skipRow) {
-						switch(logOutput->GetOutputFormat()) {
-							case TraceLogOutput::OutputFormat::Text: {
-								// Unlike the log file saver, the log network socket does
-								// not get the PC automatically. There could be some
-								// tool waiting at the other end of the socket, expecting
-								// a very specific text format. It's probably best for end
-								// users to just use the [PC] specifier explicitly if needed.
-								row.clear();
-
-								selfDerived->GetTraceRow(row, cpuState, ppuState, disassemblyInfo);
-								row += '\n';
-								networkLogger->Log((const uint8_t*)row.c_str(), (int)row.length());
-								break;
+							if(logOutput->GetIncludeImplictPC()) {
+								RowPart rowPart = {};
+								rowPart.DisplayInHex = true;
+								rowPart.MinWidth = DebugUtilities::GetProgramCounterSize(_cpuType);
+								WriteIntValue(rowText, selfDerived->GetProgramCounter(cpuState), rowPart);
+								rowText += "  ";
 							}
 
-							case TraceLogOutput::OutputFormat::Diztinguish:
-							case TraceLogOutput::OutputFormat::DiztinguishAbridged: {
-								data.clear();
-								GetTraceData(&data, cpuState, disassemblyInfo, logOutput->GetOutputFormat());
+							selfDerived->GetTraceRow(rowText, cpuState, ppuState, disassemblyInfo);
+							rowText += '\n';
+							logOutput->Log((const uint8_t*)rowText.c_str(), (int)rowText.length());
+							break;
+						}
 
-								if(!data.empty()) {
-									networkLogger->Log(&data.front(), (int)data.size());
-								}
-								break;
+						case TraceLogOutput::OutputFormat::Diztinguish:
+						case TraceLogOutput::OutputFormat::DiztinguishAbridged: {
+							rowData.clear();
+							GetTraceData(&rowData, cpuState, disassemblyInfo, logOutput->GetOutputFormat());
+
+							if(!rowData.empty()) {
+								logOutput->Log(&rowData.front(), (int)rowData.size());
 							}
+							break;
 						}
 					}
 				}
@@ -610,6 +591,13 @@ public:
 				_cpuStateQueuedForLogging = std::queue<CpuStateType>();
 				_ppuStateQueuedForLogging = std::queue<TraceLogPpuState>();
 			}
+
+			if(_rowStateInitialized) {
+				StopRowStateTracking();
+				_rowStateInitialized = false;
+			}
+
+			_anyLoggingActive = false;
 		}
 	}
 

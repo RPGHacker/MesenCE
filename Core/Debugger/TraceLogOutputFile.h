@@ -18,13 +18,10 @@ public:
 private:
 	Settings _selfSettings;
 
-	bool _enabled = false;
-	string _outputFilepath;
-	string _outputBuffer;
 	ofstream _outputFile;
 
 public:
-	~TraceLogOutputFile()
+	virtual ~TraceLogOutputFile()
 	{
 		StopLogging();
 	}
@@ -34,41 +31,42 @@ public:
 		_selfSettings = selfSettings;
 		_sharedSettings = sharedSettings;
 
-		_outputBuffer.clear();
-
 		std::ios_base::openmode openMode = ios::out;
 
-		if(!_selfSettings.NativeNewLines) {
+		if(_sharedSettings.Format != OutputFormat::Text || !_selfSettings.NativeNewLines) {
 			openMode |= ios::binary;
 		}
 
 		_outputFile.open(_selfSettings.FileName, openMode);
-		_enabled = true;
+
+		if(!_outputFile.is_open()) {
+			return false;
+		}
+
+		if(!AllocateBuffers()) {
+			_outputFile.close();
+			return false;
+		}
+
+		StartThreads();
 
 		return true;
 	}
 
 	void StopLogging()
 	{
-		if(_enabled) {
-			_enabled = false;
-			if(_outputFile) {
-				if(!_outputBuffer.empty()) {
-					_outputFile << _outputBuffer;
-				}
-				_outputFile.close();
-			}
+		if (!IsEnabled()) {
+			return;
 		}
+
+		StopThreads();
+		FreeBuffers();
+
+		_outputFile.close();
 	}
-
-	__forceinline bool IsEnabled() { return _enabled; }
-
-	void Log(string& log)
+	
+	void FlushItemToStream(const WorkItem& item) override
 	{
-		_outputBuffer += log + '\n';
-		if(_outputBuffer.size() > 32768) {
-			_outputFile << _outputBuffer;
-			_outputBuffer.clear();
-		}
+		_outputFile.write((const char*)item.Buffer, item.Size);
 	}
 };
