@@ -13,6 +13,49 @@ using System.Reflection;
 
 namespace Mesen.Debugger.ViewModels
 {
+	public class RestrictToPlatformValueConverter : IMultiValueConverter
+	{
+		 public object? Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
+		{
+			if (values.Count == 2
+				&& values[0] is object propertyOwner
+				&& values[1] is CpuType cpuType
+				&& parameter is string propertyName)
+			{
+				if(typeof(bool).IsAssignableTo(targetType) && propertyOwner != null) {
+					return IsPropertyAllowedOnPlatform(propertyOwner, propertyName, cpuType);
+				}
+			}
+
+			return new BindingNotification(new InvalidCastException(), BindingErrorType.Error);
+		}
+
+		private bool IsPropertyAllowedOnPlatform(object propertyOwner, string propertyName, CpuType cpuType)
+		{
+			// Retrieve the method information for MyMethod
+			PropertyInfo? propertyInfo = propertyOwner.GetType().GetProperty(propertyName);
+
+			if(propertyInfo == null) {
+				return false;
+			}
+
+			RestrictToPlatformsAttribute? resrictAttribute = (RestrictToPlatformsAttribute?)Attribute.GetCustomAttribute(propertyInfo, typeof(RestrictToPlatformsAttribute));
+
+			if (resrictAttribute != null)
+			{
+				foreach(var allowedCpuType in resrictAttribute.SupportedCpuTypes) {
+					if (allowedCpuType == cpuType) {
+						return true;
+					}
+				}
+
+				return false;
+			}
+
+			return true;
+		}		
+	}
+
 	public partial class TraceLogOutputConfigurationViewModel : DisposableViewModel
 	{
 		public TraceLogOutputConfig Config { get; }
