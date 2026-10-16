@@ -30,6 +30,9 @@
 							<TextBox
 								Grid.Column="0"
 								Text="{Binding Config.FileConfig.FileName}"
+								ToolTip.Tip="{l:Translate FileNameTooltip}"
+								ToolTip.Placement="Right"
+								ToolTip.ShowDelay="500"
 							/>
 							<Button
 								Grid.Column="1"
@@ -45,6 +48,9 @@
 								VerticalAlignment="Center"
 								Text="{l:Translate NativeNewLines}"
 								Margin="0 0 15 0"
+								ToolTip.Tip="{l:Translate NativeNewLinesTooltip}"
+								ToolTip.Placement="Right"
+								ToolTip.ShowDelay="500"
 							/>
 						</StackPanel>
 					</StackPanel>
@@ -65,6 +71,9 @@
 								MinWidth="50"
 								Value="{Binding Config.SocketConfig.ConnectionPort}"
 								Margin="0 0 15 0"
+								ToolTip.Tip="{l:Translate ConnectionPortTooltip}"
+								ToolTip.Placement="Right"
+								ToolTip.ShowDelay="500"
 							/>
 						</StackPanel>
 					</StackPanel>
@@ -95,6 +104,9 @@
 						Grid.Column="1"
 						SelectedItem="{Binding Config.SharedConfig.CpuDependentConfig.Format}"
 						AvailableValues="{Binding AvailableFormats}"
+						ToolTip.Tip="{l:Translate FormatTooltip}"
+						ToolTip.Placement="Right"
+						ToolTip.ShowDelay="500"
 					/>
 				</Grid>
 				<Grid ColumnDefinitions="Auto,*" Margin="0 0 0 5">
@@ -109,6 +121,9 @@
 						Grid.Column="1"
 						SelectedItem="{Binding Config.SharedConfig.CpuDependentConfig.CompressionType}"
 						AvailableValues="{Binding AvailableCompressionTypes}"
+						ToolTip.Tip="{l:Translate CompressionTypeTooltip}"
+						ToolTip.Placement="Right"
+						ToolTip.ShowDelay="500"
 					/>
 				</Grid>					
 				<StackPanel Orientation="Horizontal" Margin="0 4 0 0">
@@ -125,6 +140,9 @@
 						MinWidth="60"
 						Value="{Binding Config.SharedConfig.ChunkCount}"
 						Margin="0 0 15 0"
+						ToolTip.Tip="{l:Translate ChunkCountTooltip}"
+						ToolTip.Placement="Right"
+						ToolTip.ShowDelay="500"
 					/>
 					<TextBlock
 						Grid.Column="0"
@@ -139,6 +157,9 @@
 						MinWidth="100"
 						Value="{Binding Config.SharedConfig.ChunkSize}"
 						Margin="0 0 15 0"
+						ToolTip.Tip="{l:Translate ChunkSizeTooltip}"
+						ToolTip.Placement="Right"
+						ToolTip.ShowDelay="500"
 					/>
 				</StackPanel>
 				<StackPanel Orientation="Horizontal" Margin="0 8 0 8">
@@ -149,6 +170,9 @@
 						VerticalAlignment="Center"
 						Text="{l:Translate BatchLogData}"
 						Margin="0 0 15 0"
+						ToolTip.Tip="{l:Translate BatchLogDataTooltip}"
+						ToolTip.Placement="Right"
+						ToolTip.ShowDelay="500"
 					/>
 					<CheckBox
 						IsChecked="{Binding Config.SharedConfig.IncludeImplicitPC}"
@@ -159,6 +183,9 @@
 						Text="{l:Translate IncludeImplicitPC}"
 						Margin="0 0 15 0"
 						IsEnabled="{Binding IsUsingTextFormat}"
+						ToolTip.Tip="{l:Translate IncludeImplicitPCTooltip}"
+						ToolTip.Placement="Right"
+						ToolTip.ShowDelay="500"
 					/>
 				</StackPanel>
 				<StackPanel Orientation="Horizontal" Margin="0 0 0 8">
@@ -175,6 +202,9 @@
 						VerticalAlignment="Center"
 						Text="{l:Translate UniqueRowsOnly}"
 						Margin="0 0 15 0"
+						ToolTip.Tip="{l:Translate UniqueRowsOnlyTooltip}"
+						ToolTip.Placement="Right"
+						ToolTip.ShowDelay="500"
 					/>
 				</StackPanel>
 			</StackPanel>

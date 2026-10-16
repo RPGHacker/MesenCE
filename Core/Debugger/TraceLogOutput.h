@@ -84,6 +84,10 @@ public:
 		std::memcpy(_currentLogItem.Buffer + _currentLogItem.Size, data, length);
 		_currentLogItem.Size += length;
 
+		if(!_sharedSettings.BatchLogData) {
+			FlushCurrentWorkItem();
+		}
+
 		_insideLogFunction = false;
 	}
 
